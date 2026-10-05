@@ -1,0 +1,42 @@
+# 毎週、OpenStreetMap の日本データからスポットデータを作り直し、GitHub Pages で配信する。
+name: スポットデータを作る
+
+on:
+  schedule:
+    - cron: '0 18 * * 0'   # 毎週月曜 3:00（日本時間）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: ライブラリを入れる
+        run: pip install -r requirements.txt
+      - name: 日本のデータを取得（Geofabrik）
+        run: curl -sSfL --retry 3 -o japan.osm.pbf https://download.geofabrik.de/asia/japan-latest.osm.pbf
+      - name: マスに分けて書き出す
+        run: python build_tiles.py japan.osm.pbf site
+      - name: 中身を確認する
+        run: python check_tiles.py site
+      - name: gh-pages に公開（履歴は残さない）
+        run: |
+          cd site
+          touch .nojekyll
+          cp ../README.md .
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -qm "データ更新 $(date -u +%F)"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
