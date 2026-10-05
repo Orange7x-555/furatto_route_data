@@ -8,26 +8,28 @@ import os
 import sys
 
 root = os.path.join(sys.argv[1], 'v1')
-min_cells = int(sys.argv[2]) if len(sys.argv) > 2 else 300  # 日本全体なら数百マス
+# 日本全体なら各種類100マス以上になる（関東だけの試作は30前後）
+min_cells = int(sys.argv[2]) if len(sys.argv) > 2 else 100
 m = json.load(open(os.path.join(root, 'manifest.json'), encoding='utf-8'))
 problems = []
-counts = {}
 for layer in ('roads', 'food', 'spots', 'rests'):
     cells = m['tiles'].get(layer, [])
-    if len(cells) < min_cells:
-        problems.append(f'{layer}: マスが少なすぎます（{len(cells)}）')
     n = 0
+    with_pref = 0
     for cell in cells:
         with gzip.open(os.path.join(root, layer, f'{cell}.json.gz')) as f:
-            n += len(json.load(f)['elements'])
-    counts[layer] = n
-print('件数:', counts)
-pref = 0
-with gzip.open(os.path.join(root, 'spots', m['tiles']['spots'][0] + '.json.gz')) as f:
-    els = json.load(f)['elements']
-pref = sum(1 for e in els if 'prefectureCode' in e.get('tags', {}))
-if els and pref / len(els) < 0.5:
-    problems.append(f'都道府県が付いていないスポットが多すぎます（{pref}/{len(els)}）')
+            els = json.load(f)['elements']
+        n += len(els)
+        with_pref += sum(1 for e in els if 'prefectureCode' in e.get('tags', {}))
+    share = with_pref / n if n else 0
+    print(f'{layer}: {len(cells)}マス・{n}件・都道府県つき {share:.0%}')
+    if len(cells) < min_cells:
+        problems.append(f'{layer}: マスが少なすぎます（{len(cells)} < {min_cells}）')
+    if n == 0:
+        problems.append(f'{layer}: データが空です')
+    # 海の上の灯台などは県の外になるので、全体の8割に付いていれば良しとする
+    elif layer != 'roads' and share < 0.8:
+        problems.append(f'{layer}: 都道府県が付いていないものが多すぎます（{share:.0%}）')
 if problems:
     print('\n'.join(problems))
     sys.exit(1)
