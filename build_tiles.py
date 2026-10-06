@@ -203,8 +203,22 @@ def identity(t):
     return f"{name}|{cls}|{t.get('oneway', 'no')}|{t.get('motorcycle')}|{t.get('motorcar')}"
 
 
+# 冬季閉鎖など、期間つきの通行止め（アプリの seasonal_closure.dart が読む）
+CLOSURE_TAGS = {
+    'access:conditional', 'vehicle:conditional', 'motor_vehicle:conditional',
+    'motorcar:conditional', 'motorcycle:conditional',
+}
+WINTER_NOTE = re.compile('冬[季期]閉鎖|冬[季期](通行止|閉鎖|全面通行止)|冬季.*通行止め')
+
+
 def trim(tags):
-    return {k: v for k, v in tags.items() if k in KEEP_TAGS}
+    out = {k: v for k, v in tags.items() if k in KEEP_TAGS or k in CLOSURE_TAGS}
+    # 説明文は大きいので、冬季閉鎖の書き込みがあるときだけ残す
+    for k in ('note', 'description'):
+        v = tags.get(k)
+        if v and WINTER_NOTE.search(v):
+            out[k] = v[:200]
+    return out
 
 
 def cell_of(lat, lon):

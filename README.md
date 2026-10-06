@@ -17,6 +17,8 @@ OpenStreetMap の日本データ（[Geofabrik](https://download.geofabrik.de/asi
 | `spots` | 展望・海・道の駅・温泉・自然・湖・歴史・花・美術館・直売所・牧場・映えスポット |
 | `rests` | 道の駅・コンビニ・SA/PA（休憩場所） |
 
+道路には冬季閉鎖などの期間つきの通行止め（`*:conditional`、冬季閉鎖と書かれた `note`）も残しています。
+
 各ファイルは Overpass API の返事と同じ形（`{"elements": [...]}`）です。道の形だけ
 `"g": [緯度, 経度, 緯度, 経度, ...]` に縮めています。各要素には `prefectureCode`（例: `JP-13`）を付けています。
 
