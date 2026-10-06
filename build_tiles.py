@@ -58,6 +58,24 @@ def drivable_road(t):
     return ok and t.get('access') not in ('private', 'no') and t.get('motor_vehicle') != 'no'
 
 
+PHOTO_NAME = re.compile('フォトスポット|撮影スポット|映え|インスタ|天空の|恋人の聖地|ブランコ')
+
+
+def is_photo_spot(t):
+    """映えスポット（overpass_parser.dart の photoSpot と同じ条件）"""
+    name = t.get('name') or ''
+    if not name:
+        return False
+    if t.get('tourism') in ('artwork', 'attraction'):
+        return True
+    if t.get('natural') in ('arch', 'rock', 'stone'):
+        return True
+    # お店・宿は名前に「映え」などが付いていても外す
+    if 'amenity' in t or 'shop' in t or t.get('tourism') in ('hotel', 'guest_house', 'motel'):
+        return False
+    return bool(PHOTO_NAME.search(name))
+
+
 def poi_genres(t):
     """Overpass のクエリ（overpass_queries.dart の selectorsFor）と同じ条件"""
     g = set()
@@ -65,6 +83,8 @@ def poi_genres(t):
     has_name = bool(name)
     a, tour, leis, nat, shop = (t.get('amenity'), t.get('tourism'), t.get('leisure'),
                                 t.get('natural'), t.get('shop'))
+    if is_photo_spot(t):
+        g.add('photo')
     if a == 'cafe' and has_name:
         g.add('cafe')
     if has_name and (leis == 'garden' or t.get('garden:type') == 'botanical'):
