@@ -30,6 +30,23 @@ for layer in ('roads', 'food', 'spots', 'rests'):
     # 海の上の灯台などは県の外になるので、全体の8割に付いていれば良しとする
     elif layer != 'roads' and share < 0.8:
         problems.append(f'{layer}: 都道府県が付いていないものが多すぎます（{share:.0%}）')
+# 名前で選ぶコース（湖・島の一周と観光道路）。日本全体なら数百件になる
+idx_path = os.path.join(root, 'courses_index.json.gz')
+if not os.path.exists(idx_path):
+    problems.append('courses_index.json.gz がありません')
+else:
+    with gzip.open(idx_path) as f:
+        idx = json.load(f)['courses']
+    loops = sum(1 for c in idx if c[1] != 'road')
+    roads = len(idx) - loops
+    course_cells = set(m['tiles'].get('courses', []))
+    print(f'courses: 一周 {loops}件・観光道路 {roads}件・{len(course_cells)}マス')
+    need = max(3, min_cells // 4)
+    if loops < need or roads < max(1, need // 4):
+        problems.append(f'courses: コースが少なすぎます（一周 {loops}・道路 {roads}）')
+    missing = [c[0] for c in idx if c[6] not in course_cells]
+    if missing:
+        problems.append(f'courses: {missing[0]} などのマスがありません')
 if problems:
     print('\n'.join(problems))
     sys.exit(1)
